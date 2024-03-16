@@ -104,6 +104,8 @@ store(Pkt, LServer, {LUser, LHost}, Type, Peer, Nick, _Dir, TS) ->
     LPeer = jid:encode(
 	      jid:tolower(Peer)),
     Body = fxml:get_subtag_cdata(Pkt, <<"body">>),
+	Epoch = fxml:get_subtag_cdata(Pkt, <<"epoch">>),
+	    ?INFO_MSG("Inside store packet function", []),
     SType = misc:atom_to_binary(Type),
     SqlType = ejabberd_option:sql_type(LServer),
     XML = case mod_mam_opt:compress_xml(LServer) of
@@ -137,17 +139,7 @@ store(Pkt, LServer, {LUser, LHost}, Type, Peer, Nick, _Dir, TS) ->
 	    end;
 	    _ -> case ejabberd_sql:sql_query(
 	           LServer,
-	           ?SQL_INSERT(
-	              "archive",
-	              ["username=%(SUser)s",
-	               "server_host=%(LServer)s",
-	               "timestamp=%(TS)d",
-	               "peer=%(LPeer)s",
-	               "bare_peer=%(BarePeer)s",
-	               "xml=%(XML)s",
-	               "txt=%(Body)s",
-	               "kind=%(SType)s",
-	               "nick=%(Nick)s"])) of
+	           ?SQL("CALL custom_mam_insert (%(SUser)s,%(LServer)s,%(Epoch)s,%(LPeer)s,%(BarePeer)s,%(XML)s,%(SType)s,%(Nick)s,%(Body)s)")) of
 		{updated, _} ->
 		    ok;
 		Err ->
