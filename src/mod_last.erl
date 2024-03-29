@@ -195,6 +195,14 @@ get_last(LUser, LServer) ->
 
 -spec get_last_iq(iq(), binary(), binary()) -> iq().
 get_last_iq(#iq{lang = Lang} = IQ, LUser, LServer) ->
+    %% Prepare the command to be executed
+    Cmd = lists:flatten(io_lib:format("/home/ejabberd/bin/./ejabberdctl get_presence ~s ~s | awk '{print $2}'", [binary_to_list(LUser), binary_to_list(LServer)])),
+
+    %% Execute the command and get the status as output
+    StatusOutput = os:cmd(Cmd),
+
+    %% Trim the newline character from the output
+    Statuspresence = string:trim(StatusOutput, both, "\n"),
     case ejabberd_sm:get_user_resources(LUser, LServer) of
       [] ->
 	  case get_last(LUser, LServer) of
@@ -207,10 +215,10 @@ get_last_iq(#iq{lang = Lang} = IQ, LUser, LServer) ->
 	    {ok, TimeStamp, Status} ->
 		TimeStamp2 = erlang:system_time(second),
 		Sec = TimeStamp2 - TimeStamp,
-		xmpp:make_iq_result(IQ, #last{seconds = Sec, status = Status})
+		xmpp:make_iq_result(IQ, #last{seconds = Sec, status = Statuspresence})
 	  end;
       _ ->
-	  xmpp:make_iq_result(IQ, #last{seconds = 0})
+	  xmpp:make_iq_result(IQ, #last{seconds = 0, status = Statuspresence})
     end.
 
 -spec register_user(binary(), binary()) -> any().
